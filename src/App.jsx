@@ -6,7 +6,7 @@ import { getFirestore, doc, setDoc, getDoc, collection, query, onSnapshot, addDo
 import { User, GraduationCap, Globe, BookOpen, Send, Loader2, LogOut, CheckCheck, MessageSquare, Heart, Edit2, Clock, Search, Zap, XCircle, Bell, BellRing, Users, ArrowLeft, FileText, Brain, Share2, UserPlus, UserCheck, UserX, MoreVertical, Trash2, Mail, Phone, MapPin, Paperclip, Image as ImageIcon, Plus } from 'lucide-react';
 
 // --- Import Firebase Configuration ---
-import { firebaseConfig, appId } from './firebase-config.js';
+import { firebaseConfig, appId, API_BASE_URL } from './firebase-config.js';
 
 // --- Import Floating Chatbot Component ---
 import ProfileChatAssistant from './components/floating-chatbot/ProfileChatAssistant.jsx';
@@ -2596,7 +2596,7 @@ const Matchmaker = ({ db, userId, userName, userType, onStartConversation }) => 
       console.log(`🔍 Sending production RAG query: "${term}" for user type: ${userType}`);
       
       // Use the public endpoint for all users (it handles userType internally)
-      const endpoint = 'http://localhost:3003/smart-match-public';
+      const endpoint = `${API_BASE_URL}/smart-match-public`;
       
       if (userType === 'professor') {
         console.log('🎓 Professor searching for students');
@@ -5782,7 +5782,7 @@ const App = () => {
 
         // Also send email to your inbox
         try {
-          const emailResponse = await fetch('http://localhost:3003/api/contact', {
+          const emailResponse = await fetch(`${API_BASE_URL}/api/contact`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
@@ -6728,7 +6728,7 @@ const App = () => {
                   setMentorshipLoading(true);
                   setMessage('');
                   try {
-                    const response = await fetch('http://localhost:3003/api/mentorship', {
+                    const response = await fetch(`${API_BASE_URL}/api/mentorship`, {
                       method: 'POST',
                       headers: { 'Content-Type': 'application/json' },
                       body: JSON.stringify({ user_input: mentorshipInput }),
@@ -6939,7 +6939,7 @@ const App = () => {
     setMultiAgentLoading(true);
 
     try {
-      const response = await fetch('http://localhost:3003/api/multi-agent/mentorship', {
+      const response = await fetch(`${API_BASE_URL}/api/multi-agent/mentorship`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -7217,7 +7217,7 @@ const App = () => {
 
     setResearchJourneyLoading(true);
     try {
-      const response = await fetch(`http://localhost:3003/api/research-journey/suggest-topic`, {
+      const response = await fetch(`${API_BASE_URL}/api/research-journey/suggest-topic`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ area_of_interest: researchJourneyArea })
@@ -7249,7 +7249,7 @@ const App = () => {
       // Generate literature summary
       setResearchJourneyLoading(true);
       try {
-        const response = await fetch(`http://localhost:3003/api/research-journey/literature-summary`, {
+        const response = await fetch(`${API_BASE_URL}/api/research-journey/literature-summary`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ selected_topic: researchJourneySelectedTopic })
@@ -7269,7 +7269,7 @@ const App = () => {
       // Generate proposal
       setResearchJourneyLoading(true);
       try {
-        const response = await fetch(`http://localhost:3003/api/research-journey/generate-proposal`, {
+        const response = await fetch(`${API_BASE_URL}/api/research-journey/generate-proposal`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ 
@@ -7285,7 +7285,7 @@ const App = () => {
         setResearchJourneyStep(4);
         
         // Generate professor guidance
-        const guidanceResponse = await fetch(`http://localhost:3003/api/research-journey/professor-guidance`, {
+        const guidanceResponse = await fetch(`${API_BASE_URL}/api/research-journey/professor-guidance`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ topic: researchJourneySelectedTopic })

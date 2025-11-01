@@ -64,8 +64,9 @@ const corsOptions = {
       'http://localhost:3000',
       'http://localhost:3002',
       'http://localhost:5173',
-      'http://localhost:4173'
-    ];
+      'http://localhost:4173',
+      process.env.FRONTEND_URL // Add production frontend URL
+    ].filter(Boolean); // Remove undefined values
     
     if (allowedOrigins.includes(origin)) {
       return callback(null, true);
