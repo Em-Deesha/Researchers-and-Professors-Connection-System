@@ -791,6 +791,144 @@ app.post('/api/paper-analysis', async (req, res) => {
   }
 });
 
+// Research Journey FastAPI Service Proxy
+const RESEARCH_JOURNEY_SERVICE_URL = process.env.RESEARCH_JOURNEY_SERVICE_URL || 'http://localhost:8002';
+
+// Check if Research Journey service is available
+async function checkResearchJourneyService() {
+  try {
+    const response = await fetch(`${RESEARCH_JOURNEY_SERVICE_URL}/health`, {
+      method: 'GET',
+      signal: AbortSignal.timeout(3000)
+    });
+    return { available: response.ok, error: null };
+  } catch (error) {
+    return { available: false, error: error.message };
+  }
+}
+
+// Research Journey proxy endpoints
+app.post('/api/research-journey/sessions', async (req, res) => {
+  try {
+    const serviceStatus = await checkResearchJourneyService();
+    if (!serviceStatus.available) {
+      return res.status(503).json({
+        error: 'Research Journey service is not available',
+        details: serviceStatus.error,
+        hint: 'Ensure the Research Journey FastAPI service is running on port 8002'
+      });
+    }
+
+    const response = await fetch(`${RESEARCH_JOURNEY_SERVICE_URL}/sessions`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(req.body)
+    });
+
+    const data = await response.json();
+    res.status(response.status).json(data);
+  } catch (error) {
+    console.error('❌ Error proxying Research Journey session:', error);
+    res.status(500).json({ error: 'Internal server error', details: error.message });
+  }
+});
+
+app.post('/api/research-journey/suggest-topic', async (req, res) => {
+  try {
+    const serviceStatus = await checkResearchJourneyService();
+    if (!serviceStatus.available) {
+      return res.status(503).json({
+        error: 'Research Journey service is not available',
+        details: serviceStatus.error
+      });
+    }
+
+    const response = await fetch(`${RESEARCH_JOURNEY_SERVICE_URL}/suggest-topic`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(req.body)
+    });
+
+    const data = await response.json();
+    res.status(response.status).json(data);
+  } catch (error) {
+    console.error('❌ Error proxying topic suggestions:', error);
+    res.status(500).json({ error: 'Internal server error', details: error.message });
+  }
+});
+
+app.post('/api/research-journey/literature-summary', async (req, res) => {
+  try {
+    const serviceStatus = await checkResearchJourneyService();
+    if (!serviceStatus.available) {
+      return res.status(503).json({
+        error: 'Research Journey service is not available',
+        details: serviceStatus.error
+      });
+    }
+
+    const response = await fetch(`${RESEARCH_JOURNEY_SERVICE_URL}/literature-summary`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(req.body)
+    });
+
+    const data = await response.json();
+    res.status(response.status).json(data);
+  } catch (error) {
+    console.error('❌ Error proxying literature summary:', error);
+    res.status(500).json({ error: 'Internal server error', details: error.message });
+  }
+});
+
+app.post('/api/research-journey/generate-proposal', async (req, res) => {
+  try {
+    const serviceStatus = await checkResearchJourneyService();
+    if (!serviceStatus.available) {
+      return res.status(503).json({
+        error: 'Research Journey service is not available',
+        details: serviceStatus.error
+      });
+    }
+
+    const response = await fetch(`${RESEARCH_JOURNEY_SERVICE_URL}/generate-proposal`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(req.body)
+    });
+
+    const data = await response.json();
+    res.status(response.status).json(data);
+  } catch (error) {
+    console.error('❌ Error proxying proposal generation:', error);
+    res.status(500).json({ error: 'Internal server error', details: error.message });
+  }
+});
+
+app.post('/api/research-journey/professor-guidance', async (req, res) => {
+  try {
+    const serviceStatus = await checkResearchJourneyService();
+    if (!serviceStatus.available) {
+      return res.status(503).json({
+        error: 'Research Journey service is not available',
+        details: serviceStatus.error
+      });
+    }
+
+    const response = await fetch(`${RESEARCH_JOURNEY_SERVICE_URL}/professor-guidance`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(req.body)
+    });
+
+    const data = await response.json();
+    res.status(response.status).json(data);
+  } catch (error) {
+    console.error('❌ Error proxying professor guidance:', error);
+    res.status(500).json({ error: 'Internal server error', details: error.message });
+  }
+});
+
 // Email configuration for contact form
 const createEmailTransporter = () => {
   // Using Gmail SMTP - you can configure this in .env

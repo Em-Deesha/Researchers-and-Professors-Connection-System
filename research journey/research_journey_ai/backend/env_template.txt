@@ -1,0 +1,4 @@
+GEMINI_API_KEY=AIzaSyDyUZ6qLJRhvUIH8uqiqjMVNnSCRrgv4xE
+DATABASE_URL=sqlite:///./research_journey.db
+
+

@@ -3668,6 +3668,19 @@ const App = () => {
   const [multiAgentProvider, setMultiAgentProvider] = useState('gemini');
   const [multiAgentSessionIds, setMultiAgentSessionIds] = useState({});
 
+  // Research Journey State
+  const [researchJourneySessionId, setResearchJourneySessionId] = useState(null);
+  const [researchJourneySessionData, setResearchJourneySessionData] = useState(null);
+  const [researchJourneyStep, setResearchJourneyStep] = useState(1); // 1: Topic, 2: Literature, 3: Proposal, 4: Save
+  const [researchJourneyArea, setResearchJourneyArea] = useState('');
+  const [researchJourneyName, setResearchJourneyName] = useState('');
+  const [researchJourneyLoading, setResearchJourneyLoading] = useState(false);
+  const [researchJourneyTopicSuggestions, setResearchJourneyTopicSuggestions] = useState(null);
+  const [researchJourneySelectedTopic, setResearchJourneySelectedTopic] = useState('');
+  const [researchJourneyLiteratureSummary, setResearchJourneyLiteratureSummary] = useState(null);
+  const [researchJourneyProposal, setResearchJourneyProposal] = useState(null);
+  const [researchJourneyProfessorGuidance, setResearchJourneyProfessorGuidance] = useState(null);
+
   // Profile Data
   const [profileData, setProfileData] = useState({
     name: '',
@@ -4764,8 +4777,8 @@ const App = () => {
         </div>
       </div>
 
-      {/* Paper Analysis, Academic Mentorship, and Multi-Agent Buttons */}
-      <div className="grid md:grid-cols-3 gap-4">
+      {/* Paper Analysis, Academic Mentorship, Multi-Agent, and Research Journey Buttons */}
+      <div className="grid md:grid-cols-4 gap-4">
         <button
             onClick={() => {
               setActiveFeature('paper-analysis');
@@ -4816,6 +4829,24 @@ const App = () => {
           <div className="text-left">
             <h3 className="text-lg font-semibold text-green-900">Multi-Agent Mentorship</h3>
             <p className="text-sm text-green-700">Chat with specialized AI mentors</p>
+          </div>
+        </button>
+        
+        <button
+            onClick={() => {
+              setActiveTab('research-journey');
+              // Clear other features when switching to research journey
+              setPaperAnalysisResult(null);
+              setMentorshipResult(null);
+              setSelectedFile(null);
+              setMentorshipInput('');
+            }}
+          className="flex items-center justify-center p-6 bg-orange-50 hover:bg-orange-100 rounded-xl shadow-md transition-all duration-200 border-2 border-orange-200 hover:border-orange-400"
+        >
+          <GraduationCap className="w-8 h-8 text-orange-600 mr-4" />
+          <div className="text-left">
+            <h3 className="text-lg font-semibold text-orange-900">Research Journey</h3>
+            <p className="text-sm text-orange-700">AI-guided research from topic to proposal</p>
           </div>
         </button>
       </div>
@@ -7136,6 +7167,527 @@ const App = () => {
     );
   };
 
+  // Initialize Research Journey session on mount
+  useEffect(() => {
+    if (activeTab === 'research-journey' && !researchJourneySessionId) {
+      const newSessionId = `rj_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      setResearchJourneySessionId(newSessionId);
+      // Use profile name if available
+      if (profileData.name) {
+        setResearchJourneyName(profileData.name);
+      }
+    }
+  }, [activeTab, researchJourneySessionId, profileData.name]);
+
+  // Research Journey handlers
+  const handleResearchJourneyStart = async () => {
+    if (!researchJourneyName.trim() || !researchJourneyArea.trim()) {
+      setMessage('Please enter your name and area of interest');
+      return;
+    }
+
+    setResearchJourneyLoading(true);
+    try {
+      // Create session
+      const response = await fetch(`http://localhost:3003/api/research-journey/sessions`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          session_id: researchJourneySessionId,
+          student_name: researchJourneyName,
+          area_of_interest: researchJourneyArea
+        })
+      });
+
+      if (!response.ok) throw new Error('Failed to create session');
+
+      const sessionData = await response.json();
+      setResearchJourneySessionData(sessionData);
+      setResearchJourneyStep(2); // Move to topic selection
+      setMessage('');
+    } catch (error) {
+      setMessage(`Error: ${error.message}. Please ensure the Research Journey backend is running on port 8002.`);
+    } finally {
+      setResearchJourneyLoading(false);
+    }
+  };
+
+  const handleResearchJourneyTopicGenerate = async () => {
+    if (!researchJourneyArea.trim()) return;
+
+    setResearchJourneyLoading(true);
+    try {
+      const response = await fetch(`http://localhost:3003/api/research-journey/suggest-topic`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ area_of_interest: researchJourneyArea })
+      });
+
+      if (!response.ok) throw new Error('Failed to generate topics');
+
+      const data = await response.json();
+      setResearchJourneyTopicSuggestions(data.suggestions);
+    } catch (error) {
+      setMessage(`Error: ${error.message}`);
+    } finally {
+      setResearchJourneyLoading(false);
+    }
+  };
+
+  const handleResearchJourneyTopicSelect = (topic) => {
+    setResearchJourneySelectedTopic(topic.title);
+    setResearchJourneySessionData(prev => ({ ...prev, selected_topic: topic.title }));
+  };
+
+  const handleResearchJourneyNext = async () => {
+    if (researchJourneyStep === 2 && !researchJourneySelectedTopic) {
+      setMessage('Please select a topic to continue');
+      return;
+    }
+    
+    if (researchJourneyStep === 2 && researchJourneySelectedTopic) {
+      // Generate literature summary
+      setResearchJourneyLoading(true);
+      try {
+        const response = await fetch(`http://localhost:3003/api/research-journey/literature-summary`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ selected_topic: researchJourneySelectedTopic })
+        });
+
+        if (!response.ok) throw new Error('Failed to generate literature summary');
+
+        const data = await response.json();
+        setResearchJourneyLiteratureSummary(data.literature_summary);
+        setResearchJourneyStep(3);
+      } catch (error) {
+        setMessage(`Error: ${error.message}`);
+      } finally {
+        setResearchJourneyLoading(false);
+      }
+    } else if (researchJourneyStep === 3) {
+      // Generate proposal
+      setResearchJourneyLoading(true);
+      try {
+        const response = await fetch(`http://localhost:3003/api/research-journey/generate-proposal`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ 
+            topic: researchJourneySelectedTopic,
+            research_questions: 'General research questions'
+          })
+        });
+
+        if (!response.ok) throw new Error('Failed to generate proposal');
+
+        const data = await response.json();
+        setResearchJourneyProposal(data.proposal);
+        setResearchJourneyStep(4);
+        
+        // Generate professor guidance
+        const guidanceResponse = await fetch(`http://localhost:3003/api/research-journey/professor-guidance`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ topic: researchJourneySelectedTopic })
+        });
+        
+        if (guidanceResponse.ok) {
+          const guidanceData = await guidanceResponse.json();
+          setResearchJourneyProfessorGuidance(guidanceData.guidance);
+        }
+      } catch (error) {
+        setMessage(`Error: ${error.message}`);
+      } finally {
+        setResearchJourneyLoading(false);
+      }
+    } else if (researchJourneyStep === 4) {
+      setResearchJourneyStep(5);
+    }
+  };
+
+  const handleResearchJourneyPrev = () => {
+    if (researchJourneyStep > 1) {
+      setResearchJourneyStep(researchJourneyStep - 1);
+    }
+  };
+
+  const handleDownloadProposal = () => {
+    if (!researchJourneyProposal) return;
+    
+    const proposalText = `
+RESEARCH PROPOSAL
+
+Title: ${researchJourneyProposal.title || 'Your Research Title'}
+
+Abstract:
+${researchJourneyProposal.abstract || 'Your research abstract'}
+
+Research Objectives:
+${researchJourneyProposal.objectives || 'Your research objectives'}
+
+Methodology:
+${researchJourneyProposal.methodology || 'Your research methodology'}
+
+Generated by ResearchLink Research Journey
+Date: ${new Date().toLocaleDateString()}
+    `.trim();
+
+    const blob = new Blob([proposalText], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `research_proposal_${researchJourneyName || 'student'}_${new Date().toISOString().split('T')[0]}.txt`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
+  const renderResearchJourneyTab = () => {
+    const steps = [
+      { id: 1, title: 'Getting Started', description: 'Enter your details' },
+      { id: 2, title: 'Choose Topic', description: 'Select your research focus' },
+      { id: 3, title: 'Literature Review', description: 'Explore existing research' },
+      { id: 4, title: 'Write Proposal', description: 'Craft your research proposal' },
+      { id: 5, title: 'Save Progress', description: 'Download and complete' }
+    ];
+
+    return (
+      <div className="max-w-6xl mx-auto px-4 py-8">
+        <div className="bg-white rounded-xl shadow-lg p-8 mb-6">
+          <h2 className="text-3xl font-bold text-gray-900 mb-2 flex items-center">
+            <GraduationCap className="w-8 h-8 mr-3 text-orange-600" />
+            AI-Powered Research Journey
+          </h2>
+          <p className="text-gray-600 mb-6">
+            Get step-by-step AI guidance from topic selection to research proposal writing.
+          </p>
+
+          {/* Progress Steps */}
+          <div className="flex items-center justify-between mb-8 border-b pb-6">
+            {steps.map((step, index) => (
+              <div key={step.id} className="flex items-center flex-1">
+                <div className="flex items-center">
+                  <div className={`w-10 h-10 rounded-full flex items-center justify-center font-semibold ${
+                    researchJourneyStep === step.id ? 'bg-orange-500 text-white' :
+                    researchJourneyStep > step.id ? 'bg-green-500 text-white' :
+                    'bg-gray-200 text-gray-600'
+                  }`}>
+                    {researchJourneyStep > step.id ? '✓' : step.id}
+                  </div>
+                  <div className="ml-3 hidden sm:block">
+                    <p className="text-sm font-medium text-gray-900">{step.title}</p>
+                    <p className="text-xs text-gray-500">{step.description}</p>
+                  </div>
+                </div>
+                {index < steps.length - 1 && (
+                  <div className="flex-1 h-0.5 bg-gray-200 mx-4 hidden sm:block"></div>
+                )}
+              </div>
+            ))}
+          </div>
+
+          {/* Step 1: Getting Started */}
+          {researchJourneyStep === 1 && (
+            <div className="space-y-6">
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">Your Name *</label>
+                <input
+                  type="text"
+                  value={researchJourneyName}
+                  onChange={(e) => setResearchJourneyName(e.target.value)}
+                  className="w-full rounded-lg border border-gray-300 p-3 focus:border-orange-500 focus:ring-orange-500"
+                  placeholder="Enter your name"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">Area of Interest *</label>
+                <textarea
+                  value={researchJourneyArea}
+                  onChange={(e) => setResearchJourneyArea(e.target.value)}
+                  className="w-full rounded-lg border border-gray-300 p-3 focus:border-orange-500 focus:ring-orange-500"
+                  rows={3}
+                  placeholder="e.g., AI in healthcare, Machine Learning, Data Science, etc."
+                />
+              </div>
+              <button
+                onClick={handleResearchJourneyStart}
+                disabled={researchJourneyLoading || !researchJourneyName.trim() || !researchJourneyArea.trim()}
+                className="w-full py-3 bg-gradient-to-r from-orange-600 to-orange-700 text-white rounded-xl hover:from-orange-700 hover:to-orange-800 transition-all font-semibold text-lg shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+              >
+                {researchJourneyLoading ? (
+                  <>
+                    <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                    Starting Journey...
+                  </>
+                ) : (
+                  <>
+                    <GraduationCap className="w-5 h-5 mr-2" />
+                    Begin My Research Journey
+                  </>
+                )}
+              </button>
+            </div>
+          )}
+
+          {/* Step 2: Topic Selection */}
+          {researchJourneyStep === 2 && (
+            <div className="space-y-6">
+              <div className="text-center mb-6">
+                <h3 className="text-2xl font-bold text-gray-900 mb-2">Choose Your Research Topic</h3>
+                <p className="text-gray-600">
+                  Based on your interest in <strong>{researchJourneyArea}</strong>
+                </p>
+              </div>
+
+              {!researchJourneyTopicSuggestions && (
+                <button
+                  onClick={handleResearchJourneyTopicGenerate}
+                  disabled={researchJourneyLoading}
+                  className="w-full py-3 bg-orange-600 text-white rounded-xl hover:bg-orange-700 transition-all font-semibold disabled:opacity-50 flex items-center justify-center"
+                >
+                  {researchJourneyLoading ? (
+                    <>
+                      <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                      AI is analyzing and generating topics...
+                    </>
+                  ) : (
+                    'Generate Topic Suggestions'
+                  )}
+                </button>
+              )}
+
+              {researchJourneyTopicSuggestions && researchJourneyTopicSuggestions.topics && (
+                <div className="space-y-4">
+                  {researchJourneyTopicSuggestions.topics.map((topic, index) => (
+                    <div
+                      key={index}
+                      onClick={() => handleResearchJourneyTopicSelect(topic)}
+                      className={`border-2 rounded-xl p-6 cursor-pointer transition-all ${
+                        researchJourneySelectedTopic === topic.title
+                          ? 'border-orange-500 bg-orange-50'
+                          : 'border-gray-200 hover:border-orange-300 hover:bg-gray-50'
+                      }`}
+                    >
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <h4 className="text-xl font-semibold text-gray-900 mb-2">{topic.title}</h4>
+                          <p className="text-gray-600 mb-4">{topic.explanation}</p>
+                          <div className="space-y-3">
+                            <div>
+                              <p className="text-sm font-medium text-gray-700 mb-2">Keywords:</p>
+                              <div className="flex flex-wrap gap-2">
+                                {topic.keywords?.map((kw, idx) => (
+                                  <span key={idx} className="px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-sm">
+                                    {kw}
+                                  </span>
+                                ))}
+                              </div>
+                            </div>
+                            <div>
+                              <p className="text-sm font-medium text-gray-700 mb-2">Sample Questions:</p>
+                              <ul className="list-disc list-inside text-sm text-gray-600 space-y-1">
+                                {topic.questions?.map((q, idx) => (
+                                  <li key={idx}>{q}</li>
+                                ))}
+                              </ul>
+                            </div>
+                          </div>
+                        </div>
+                        <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center ml-4 ${
+                          researchJourneySelectedTopic === topic.title
+                            ? 'border-orange-500 bg-orange-500'
+                            : 'border-gray-300'
+                        }`}>
+                          {researchJourneySelectedTopic === topic.title && (
+                            <CheckCheck className="w-4 h-4 text-white" />
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              <div className="flex justify-end mt-6">
+                <button
+                  onClick={handleResearchJourneyNext}
+                  disabled={!researchJourneySelectedTopic || researchJourneyLoading}
+                  className="px-6 py-3 bg-orange-600 text-white rounded-xl hover:bg-orange-700 transition-all font-semibold disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
+                >
+                  Continue to Literature Review <ArrowLeft className="w-5 h-5 ml-2 rotate-180" />
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Step 3: Literature Review */}
+          {researchJourneyStep === 3 && researchJourneyLiteratureSummary && (
+            <div className="space-y-6">
+              <div className="text-center mb-6">
+                <h3 className="text-2xl font-bold text-gray-900 mb-2">Literature Review</h3>
+                <p className="text-gray-600">
+                  AI-generated summary for: <strong>{researchJourneySelectedTopic}</strong>
+                </p>
+              </div>
+
+              <div className="bg-gray-50 rounded-xl p-6">
+                <h4 className="text-lg font-semibold text-gray-900 mb-4">Summary</h4>
+                <div className="prose max-w-none whitespace-pre-wrap text-gray-700 leading-relaxed">
+                  {researchJourneyLiteratureSummary.summary}
+                </div>
+              </div>
+
+              {researchJourneyLiteratureSummary.key_papers && (
+                <div>
+                  <h4 className="text-lg font-semibold text-gray-900 mb-4">Key Papers to Read</h4>
+                  <div className="space-y-3">
+                    {researchJourneyLiteratureSummary.key_papers.map((paper, idx) => (
+                      <div key={idx} className="bg-white border border-gray-200 rounded-lg p-4">
+                        <h5 className="font-semibold text-gray-900 mb-2">{paper.title}</h5>
+                        <p className="text-sm text-gray-600"><strong>Authors:</strong> {paper.authors}</p>
+                        <p className="text-sm text-gray-600"><strong>Year:</strong> {paper.year}</p>
+                        <p className="text-sm text-gray-600"><strong>Relevance:</strong> {paper.relevance}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              <div className="flex justify-between mt-6">
+                <button
+                  onClick={handleResearchJourneyPrev}
+                  className="px-6 py-3 bg-gray-200 text-gray-700 rounded-xl hover:bg-gray-300 transition-all font-semibold flex items-center"
+                >
+                  <ArrowLeft className="w-5 h-5 mr-2" /> Back
+                </button>
+                <button
+                  onClick={handleResearchJourneyNext}
+                  disabled={researchJourneyLoading}
+                  className="px-6 py-3 bg-orange-600 text-white rounded-xl hover:bg-orange-700 transition-all font-semibold disabled:opacity-50 flex items-center"
+                >
+                  {researchJourneyLoading ? (
+                    <>
+                      <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                      Generating Proposal...
+                    </>
+                  ) : (
+                    <>
+                      Continue to Proposal <ArrowLeft className="w-5 h-5 ml-2 rotate-180" />
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Step 4: Proposal Builder */}
+          {researchJourneyStep === 4 && researchJourneyProposal && (
+            <div className="space-y-6">
+              <div className="text-center mb-6">
+                <h3 className="text-2xl font-bold text-gray-900 mb-2">Research Proposal</h3>
+                <p className="text-gray-600">
+                  Generated for: <strong>{researchJourneySelectedTopic}</strong>
+                </p>
+              </div>
+
+              <div className="space-y-6">
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">Title</label>
+                  <textarea
+                    value={researchJourneyProposal.title || ''}
+                    onChange={(e) => setResearchJourneyProposal(prev => ({ ...prev, title: e.target.value }))}
+                    className="w-full rounded-lg border border-gray-300 p-3 focus:border-orange-500 focus:ring-orange-500"
+                    rows={2}
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">Abstract</label>
+                  <textarea
+                    value={researchJourneyProposal.abstract || ''}
+                    onChange={(e) => setResearchJourneyProposal(prev => ({ ...prev, abstract: e.target.value }))}
+                    className="w-full rounded-lg border border-gray-300 p-3 focus:border-orange-500 focus:ring-orange-500"
+                    rows={6}
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">Objectives</label>
+                  <textarea
+                    value={researchJourneyProposal.objectives || ''}
+                    onChange={(e) => setResearchJourneyProposal(prev => ({ ...prev, objectives: e.target.value }))}
+                    className="w-full rounded-lg border border-gray-300 p-3 focus:border-orange-500 focus:ring-orange-500"
+                    rows={5}
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">Methodology</label>
+                  <textarea
+                    value={researchJourneyProposal.methodology || ''}
+                    onChange={(e) => setResearchJourneyProposal(prev => ({ ...prev, methodology: e.target.value }))}
+                    className="w-full rounded-lg border border-gray-300 p-3 focus:border-orange-500 focus:ring-orange-500"
+                    rows={6}
+                  />
+                </div>
+              </div>
+
+              <div className="flex justify-between mt-6">
+                <button
+                  onClick={handleResearchJourneyPrev}
+                  className="px-6 py-3 bg-gray-200 text-gray-700 rounded-xl hover:bg-gray-300 transition-all font-semibold flex items-center"
+                >
+                  <ArrowLeft className="w-5 h-5 mr-2" /> Back
+                </button>
+                <button
+                  onClick={handleResearchJourneyNext}
+                  className="px-6 py-3 bg-orange-600 text-white rounded-xl hover:bg-orange-700 transition-all font-semibold flex items-center"
+                >
+                  Continue to Save <ArrowLeft className="w-5 h-5 ml-2 rotate-180" />
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Step 5: Save Progress */}
+          {researchJourneyStep === 5 && (
+            <div className="space-y-6">
+              <div className="text-center mb-6">
+                <h3 className="text-2xl font-bold text-gray-900 mb-2">🎉 Research Journey Complete!</h3>
+                <p className="text-gray-600">Save and download your research proposal</p>
+              </div>
+
+              {researchJourneyProfessorGuidance && (
+                <div className="bg-blue-50 border border-blue-200 rounded-xl p-6">
+                  <h4 className="text-lg font-semibold text-blue-900 mb-4">📧 Professor Contact Guidance</h4>
+                  <div className="prose max-w-none whitespace-pre-wrap text-gray-700 leading-relaxed">
+                    {typeof researchJourneyProfessorGuidance === 'string' 
+                      ? researchJourneyProfessorGuidance 
+                      : researchJourneyProfessorGuidance.guidance}
+                  </div>
+                </div>
+              )}
+
+              <div className="flex gap-4 justify-center">
+                <button
+                  onClick={handleDownloadProposal}
+                  className="px-6 py-3 bg-orange-600 text-white rounded-xl hover:bg-orange-700 transition-all font-semibold flex items-center"
+                >
+                  <FileText className="w-5 h-5 mr-2" />
+                  Download Proposal
+                </button>
+                <button
+                  onClick={handleResearchJourneyPrev}
+                  className="px-6 py-3 bg-gray-200 text-gray-700 rounded-xl hover:bg-gray-300 transition-all font-semibold flex items-center"
+                >
+                  <ArrowLeft className="w-5 h-5 mr-2" /> Back to Proposal
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  };
+
   // --- UI RENDER ---
 
   if (loading && !isAuthReady) {
@@ -7411,6 +7963,7 @@ const App = () => {
         {activeTab === 'chats' && renderChatsTab()}
         {activeTab === 'paper-analysis' && renderPaperAnalysisTab()}
         {activeTab === 'multi-agent-mentorship' && renderMultiAgentMentorshipTab()}
+        {activeTab === 'research-journey' && renderResearchJourneyTab()}
         {activeTab === 'contact' && renderContactUsTab()}
         {activeTab === 'admin' && <AdminDashboard db={db} userId={userId} />}
       </main>
