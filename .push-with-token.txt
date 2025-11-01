@@ -1,0 +1,11 @@
+To push the code automatically, you need to provide your GitHub Personal Access Token.
+
+Quick steps:
+1. Get token: https://github.com/settings/tokens → Generate new token (classic)
+2. Run: export GITHUB_TOKEN=your_token_here
+3. Run: ./auto-push.sh
+
+Or provide token inline:
+   GITHUB_TOKEN=your_token ./auto-push.sh
+
+This is secure - the token is only used for authentication and not stored.

@@ -1,0 +1,124 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Custom scrollbar styles */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 3px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 3px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #a8a8a8;
+}
+
+/* Global styles */
+body {
+  font-family: 'Inter', sans-serif;
+  margin: 0;
+  padding: 0;
+}
+
+/* Animation for smooth transitions */
+* {
+  transition: all 0.2s ease-in-out;
+}
+
+/* Paper Analysis Results Text Styling - Matches Flask App */
+.paper-result-text {
+  color: #374151;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  font-size: 0.95rem;
+  word-wrap: break-word;
+  max-width: 100%;
+}
+
+/* Scrollbar styling for card content */
+.paper-result-text::-webkit-scrollbar,
+div[id*="-card-content"]::-webkit-scrollbar {
+  width: 8px;
+}
+
+.paper-result-text::-webkit-scrollbar-track,
+div[id*="-card-content"]::-webkit-scrollbar-track {
+  background: #f1f5f9;
+  border-radius: 4px;
+}
+
+.paper-result-text::-webkit-scrollbar-thumb,
+div[id*="-card-content"]::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
+}
+
+.paper-result-text::-webkit-scrollbar-thumb:hover,
+div[id*="-card-content"]::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+.paper-result-text strong,
+.paper-result-text b {
+  color: #2563eb;
+  font-weight: 600;
+}
+
+.paper-result-text h1,
+.paper-result-text h2,
+.paper-result-text h3,
+.paper-result-text h4,
+.paper-result-text h5,
+.paper-result-text h6 {
+  color: #1e293b;
+  font-weight: 600;
+  margin: 1rem 0 0.5rem 0;
+}
+
+.paper-result-text h1 {
+  font-size: 1.4rem;
+}
+
+.paper-result-text h2 {
+  font-size: 1.3rem;
+}
+
+.paper-result-text h3 {
+  font-size: 1.2rem;
+}
+
+.paper-result-text ul,
+.paper-result-text ol {
+  margin: 1rem 0;
+  padding-left: 1.5rem;
+}
+
+.paper-result-text li {
+  margin: 0.5rem 0;
+  color: #374151;
+}
+
+.paper-result-text ul li::marker {
+  color: #14b8a6;
+}
+
+.paper-result-text ol li::marker {
+  color: #14b8a6;
+}
+
+.paper-result-text p {
+  margin: 0.75rem 0;
+  color: #374151;
+}
+
+.paper-result-text * {
+  color: inherit;
+}
