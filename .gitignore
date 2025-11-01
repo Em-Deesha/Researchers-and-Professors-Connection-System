@@ -60,3 +60,8 @@ rag-backend/production.env
 
 # ChromaDB
 rag-backend/chroma_db/
+
+# Database files
+*.db
+*.sqlite
+*.sqlite3
