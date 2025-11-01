@@ -4829,7 +4829,7 @@ const App = () => {
           <div className="text-left">
             <h3 className="text-lg font-semibold text-green-900">Multi-Agent Mentorship</h3>
             <p className="text-sm text-green-700">Chat with specialized AI mentors</p>
-          </div>
+      </div>
         </button>
         
         <button
